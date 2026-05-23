@@ -1,0 +1,4 @@
+timestamp,market_slug,market_title,outcome,side,action,price,shares,notional,fees
+2026-05-01T12:00:00Z,oil-hormuz-may,"Will Hormuz close in May?",Yes,BUY,BUY,0.42,100,42,0.10
+2026-05-01T13:00:00Z,oil-hormuz-may,"Will Hormuz close in May?",Yes,BUY,BUY,0.43,50,21.5,0.05
+2026-05-02T09:00:00Z,election-turnout-2026,"Will turnout exceed 60%?",No,SELL,SELL,0.31,25,7.75,0.02

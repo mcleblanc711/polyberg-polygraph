@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.streamlit/
+data/processed/*.sqlite
+data/processed/*.db
+data/processed/*.md
+data/raw_exports/*.csv
+!tests/fixtures/*.csv
