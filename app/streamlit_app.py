@@ -10,6 +10,7 @@ from ledger.enums import ASSISTANTS, ATTRIBUTIONS, PROJECTS, REVIEW_STATUSES
 from ledger.export_packets import export_attribution_packet, export_postmortem_packet, save_packet
 from ledger.grouping import suggest_candidate_groups
 from ledger.import_trades import import_trades_csv
+from ledger.transcript_import import import_transcript_text
 from ledger.services import (
     add_assistant_attribution,
     create_decision,
@@ -41,6 +42,7 @@ PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 tabs = st.tabs(
     [
         "Import Trades",
+        "Import Transcripts",
         "Trade Ledger",
         "Unlinked Trades",
         "Decisions",
@@ -77,6 +79,38 @@ with tabs[0]:
             st.error(str(exc))
 
 with tabs[1]:
+    st.subheader("Import Transcripts")
+    uploaded = st.file_uploader(
+        "Transcript file (.txt, .md, .json)",
+        type=["txt", "md", "json"],
+        help="Plain text (Human:/Assistant: labels) or ChatGPT JSON export.",
+    )
+    assistant = st.selectbox("Assistant", sorted(ASSISTANTS), key="transcript_assistant")
+    if uploaded:
+        fmt = "chatgpt_json" if uploaded.name.lower().endswith(".json") else "plain"
+        text = uploaded.read().decode("utf-8", errors="replace")
+        st.caption(f"Detected format: **{fmt}** — {len(text):,} chars")
+        if st.button("Import transcript"):
+            try:
+                result = import_transcript_text(conn, text, assistant, uploaded.name, fmt=fmt)
+                st.success(
+                    f"Created {result.attributions_created} attribution(s) from "
+                    f"{result.assistant_turns} assistant turn(s)."
+                )
+                st.json(
+                    {
+                        "turns_parsed": result.turns_parsed,
+                        "assistant_turns": result.assistant_turns,
+                        "matches_found": result.matches_found,
+                        "attributions_created": result.attributions_created,
+                        "duplicates_skipped": result.duplicates_skipped,
+                        "errors": result.errors,
+                    }
+                )
+            except Exception as exc:
+                st.error(str(exc))
+
+with tabs[2]:
     st.subheader("Trade Ledger")
     c1, c2, c3, c4, c5 = st.columns(5)
     project = c1.selectbox("Project", [""] + sorted(PROJECTS))
@@ -97,7 +131,7 @@ with tabs[1]:
     )
     dataframe(rows)
 
-with tabs[2]:
+with tabs[3]:
     st.subheader("Unlinked Trades")
     unlinked = fetch_unlinked_trades(conn)
     dataframe(unlinked)
@@ -122,7 +156,7 @@ with tabs[2]:
             except Exception as exc:
                 st.error(str(exc))
 
-with tabs[3]:
+with tabs[4]:
     st.subheader("Decisions")
     with st.expander("Create decision", expanded=True):
         with st.form("create_decision"):
@@ -183,7 +217,7 @@ with tabs[3]:
         st.markdown("#### Linked Trades")
         dataframe(get_linked_trades(conn, selected_decision))
 
-with tabs[4]:
+with tabs[5]:
     st.subheader("Assistant Attribution")
     trades = fetch_trades(conn)
     decisions = fetch_decisions(conn)
@@ -238,7 +272,7 @@ with tabs[4]:
             except Exception as exc:
                 st.error(str(exc))
 
-with tabs[5]:
+with tabs[6]:
     st.subheader("Post-Mortems")
     decisions = fetch_decisions(conn)
     decision_ids = [d["decision_id"] for d in decisions]
@@ -286,7 +320,7 @@ with tabs[5]:
                     st.error(str(exc))
     dataframe(get_postmortems(conn))
 
-with tabs[6]:
+with tabs[7]:
     st.subheader("Export Review Packets")
     trades = fetch_trades(conn)
     decisions = fetch_decisions(conn)
