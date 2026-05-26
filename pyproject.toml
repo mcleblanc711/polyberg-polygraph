@@ -12,10 +12,16 @@ dependencies = [
 dev = [
   "pytest>=7.0",
 ]
+mcp = [
+  "mcp>=1.0",
+]
+
+[project.scripts]
+polygraph-mcp = "mcp_server.server:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.setuptools.packages.find]
-include = ["ledger*"]
+include = ["ledger*", "mcp_server*"]

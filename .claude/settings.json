@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "polygraph": {
+      "type": "stdio",
+      "command": "/home/cleblanc/projects/polyberg-polygraph/.venv/bin/python",
+      "args": ["-m", "mcp_server.server"],
+      "cwd": "/home/cleblanc/projects/polyberg-polygraph"
+    }
+  }
+}
