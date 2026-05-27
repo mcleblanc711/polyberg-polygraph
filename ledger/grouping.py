@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
 from itertools import groupby
 from typing import Any
+
+from ledger.utils import parse_timestamp
 
 
 def suggest_candidate_groups(
@@ -87,7 +88,4 @@ def _append_suggestion(
 
 
 def _parse_time(value: str) -> datetime:
-    # Unix epoch integer (Polymarket history export)
-    if value.lstrip("-").isdigit():
-        return datetime.fromtimestamp(int(value), tz=timezone.utc)
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return parse_timestamp(value)

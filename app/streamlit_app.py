@@ -7,6 +7,7 @@ import streamlit as st
 
 from ledger.db import DEFAULT_DB_PATH, connect_db
 from ledger.enums import ASSISTANTS, ATTRIBUTIONS, PROJECTS, REVIEW_STATUSES
+from ledger.attribution_prompt import generate_attribution_prompt
 from ledger.export_packets import export_attribution_packet, export_postmortem_packet, save_packet
 from ledger.grouping import suggest_candidate_groups
 from ledger.import_trades import import_trades_csv
@@ -56,6 +57,7 @@ tabs = st.tabs(
         "Post-Mortems",
         "Export Review Packets",
         "Export to Sheets",
+        "Attribution Prompt",
     ]
 )
 
@@ -356,6 +358,41 @@ with tabs[7]:
                 st.success(f"Saved {saved}")
             except Exception as exc:
                 st.error(str(exc))
+
+with tabs[9]:
+    st.subheader("Attribution Prompt")
+    st.caption(
+        "Generate a formatted trade list to paste into Claude or GPT. "
+        "The AI identifies which trades it discussed with you; you fill in the rest."
+    )
+    days_options = {30: "Last 30 days", 90: "Last 90 days", 365: "Last 365 days", 0: "All time"}
+    days_back = st.selectbox(
+        "Date range",
+        options=list(days_options.keys()),
+        format_func=lambda x: days_options[x],
+    )
+    if st.button("Generate prompt"):
+        from datetime import datetime, timedelta, timezone as _tz
+        from ledger.utils import timestamp_to_float
+        all_trades = fetch_trades(conn)
+        if days_back:
+            cutoff = (datetime.now(_tz.utc) - timedelta(days=days_back)).timestamp()
+            filtered = [t for t in all_trades if timestamp_to_float(t["timestamp"]) >= cutoff]
+        else:
+            filtered = all_trades
+        if not filtered:
+            st.warning("No trades in the selected range.")
+        else:
+            prompt_text = generate_attribution_prompt(filtered)
+            st.download_button(
+                "Download as .txt",
+                data=prompt_text,
+                file_name="attribution_prompt.txt",
+                mime="text/plain",
+            )
+            st.caption(f"{len(filtered)} trades — preview (first 100 lines):")
+            preview_lines = prompt_text.splitlines()[:100]
+            st.text("\n".join(preview_lines) + ("\n..." if len(prompt_text.splitlines()) > 100 else ""))
 
 with tabs[8]:
     st.subheader("Export to Sheets")
