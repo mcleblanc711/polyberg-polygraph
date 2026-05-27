@@ -30,6 +30,12 @@ from ledger.services import (
 RAW_EXPORTS_DIR = Path("data/raw_exports")
 PROCESSED_DIR = Path("data/processed")
 
+try:
+    from ledger.sheets_export import export_to_sheets
+    _SHEETS_AVAILABLE = True
+except ImportError:
+    _SHEETS_AVAILABLE = False
+
 
 st.set_page_config(page_title="Polygraph", layout="wide")
 st.title("Polygraph")
@@ -49,6 +55,7 @@ tabs = st.tabs(
         "Assistant Attribution",
         "Post-Mortems",
         "Export Review Packets",
+        "Export to Sheets",
     ]
 )
 
@@ -347,5 +354,27 @@ with tabs[7]:
                 st.text_area("Packet", packet, height=500)
                 saved = save_packet(packet, PROCESSED_DIR, f"postmortem_{decision_id}.md")
                 st.success(f"Saved {saved}")
+            except Exception as exc:
+                st.error(str(exc))
+
+with tabs[8]:
+    st.subheader("Export to Sheets")
+    if not _SHEETS_AVAILABLE:
+        st.error("gspread is not installed. Run: pip install 'polyberg-polygraph[sheets]'")
+    else:
+        spreadsheet_id = st.text_input(
+            "Spreadsheet URL or ID",
+            help="Paste the full Google Sheets URL or just the spreadsheet key from the URL.",
+        )
+        credentials_path = st.text_input(
+            "Service account credentials JSON path",
+            value="credentials.json",
+            help="Path to the service account key file downloaded from Google Cloud Console.",
+        )
+        if st.button("Export all tables", disabled=not spreadsheet_id):
+            try:
+                counts = export_to_sheets(conn, spreadsheet_id.strip(), credentials_path.strip())
+                st.success("Export complete")
+                st.json(counts)
             except Exception as exc:
                 st.error(str(exc))

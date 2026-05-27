@@ -108,6 +108,13 @@ def fetch_decisions(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     return rows_to_dicts(rows)
 
 
+def fetch_attributions(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT * FROM assistant_attributions ORDER BY created_at DESC"
+    ).fetchall()
+    return rows_to_dicts(rows)
+
+
 def fetch_trades(
     conn: sqlite3.Connection,
     project: str | None = None,
