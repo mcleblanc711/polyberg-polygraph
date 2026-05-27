@@ -23,21 +23,24 @@ class ImportResult:
     rows_seen: int = 0
     rows_imported: int = 0
     duplicates_skipped: int = 0
+    non_trade_skipped: int = 0
     errors: list[str] = field(default_factory=list)
 
 
 COLUMN_ALIASES = {
     "timestamp": {"timestamp", "time", "date", "created_at", "created"},
     "market_slug": {"market_slug", "market", "slug", "market_id"},
-    "market_title": {"market_title", "title", "question", "market_question"},
-    "outcome": {"outcome", "token", "position", "asset", "contract"},
+    "market_title": {"market_title", "title", "question", "market_question", "marketname", "market_name"},
+    "outcome": {"outcome", "token", "position", "asset", "contract", "tokenname", "token_name"},
     "side": {"side", "buy_sell", "buy/sell", "direction"},
     "action": {"action", "type", "trade_type"},
     "price": {"price", "avg_price", "average_price"},
-    "shares": {"shares", "size", "quantity", "qty", "amount_shares"},
-    "notional": {"notional", "amount", "value", "total", "cash_value"},
+    "shares": {"shares", "size", "quantity", "qty", "amount_shares", "tokenamount", "token_amount"},
+    "notional": {"notional", "amount", "value", "total", "cash_value", "usdcamount", "usdc_amount"},
     "fees": {"fees", "fee"},
 }
+
+_TRADE_ACTIONS = {"buy", "sell"}
 
 
 def import_trades_csv(conn: sqlite3.Connection, csv_path: str | Path) -> ImportResult:
@@ -52,6 +55,19 @@ def import_trades_csv(conn: sqlite3.Connection, csv_path: str | Path) -> ImportR
 
     rename_map = _build_rename_map(df.columns)
     normalized = df.rename(columns=rename_map)
+
+    if "action" in normalized.columns:
+        is_trade = normalized["action"].str.lower().isin(_TRADE_ACTIONS)
+        result.non_trade_skipped = int((~is_trade).sum())
+        normalized = normalized[is_trade].reset_index(drop=True)
+        df = df[is_trade.values].reset_index(drop=True)
+
+    if normalized.empty:
+        return result
+
+    if "price" not in normalized.columns:
+        normalized = _derive_price(normalized)
+
     _validate_required_columns(normalized)
 
     imported_at = _now_iso()
@@ -166,6 +182,16 @@ def _normalize_row(
         "fees": normalized_for_hash["fees"],
         "raw_json": json.dumps(raw_row, sort_keys=True, default=str),
     }
+
+
+def _derive_price(df: pd.DataFrame) -> pd.DataFrame:
+    if "notional" not in df.columns or "shares" not in df.columns:
+        return df
+    df = df.copy()
+    notional = pd.to_numeric(df["notional"], errors="coerce")
+    shares = pd.to_numeric(df["shares"], errors="coerce").replace(0, pd.NA)
+    df["price"] = notional / shares
+    return df
 
 
 def _hash_json(value: dict[str, Any]) -> str:
