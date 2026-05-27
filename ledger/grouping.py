@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from itertools import groupby
 from typing import Any
 
@@ -87,5 +87,7 @@ def _append_suggestion(
 
 
 def _parse_time(value: str) -> datetime:
-    cleaned = value.replace("Z", "+00:00")
-    return datetime.fromisoformat(cleaned)
+    # Unix epoch integer (Polymarket history export)
+    if value.lstrip("-").isdigit():
+        return datetime.fromtimestamp(int(value), tz=timezone.utc)
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
