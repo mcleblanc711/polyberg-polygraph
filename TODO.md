@@ -17,5 +17,3 @@
   - Streamlit "Export to Sheets" tab (tab 9); graceful degradation if gspread not installed
   - 8 new tests, 33 total passing
 
-### Later
-- Sports paper-trading module

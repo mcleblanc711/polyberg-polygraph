@@ -119,4 +119,3 @@ Tests use temporary SQLite databases and do not require network access.
 - MCP read tools
 - MCP controlled write tools
 - Google Sheets export
-- Sports paper-trading module
