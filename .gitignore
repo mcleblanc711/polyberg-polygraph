@@ -9,3 +9,7 @@ data/processed/*.db
 data/processed/*.md
 data/raw_exports/*.csv
 !tests/fixtures/*.csv
+
+# frontend
+app/ui/node_modules/
+app/ui/dist/

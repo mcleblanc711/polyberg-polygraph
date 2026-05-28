@@ -18,13 +18,19 @@ mcp = [
 sheets = [
   "gspread>=6.0",
 ]
+api = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "python-multipart>=0.0.9",
+]
 
 [project.scripts]
 polygraph-mcp = "mcp_server.server:main"
+polygraph-api = "app.api.main:start"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.setuptools.packages.find]
-include = ["ledger*", "mcp_server*"]
+include = ["ledger*", "mcp_server*", "app*"]

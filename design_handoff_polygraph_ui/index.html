@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Polygraph — design canvas</title>
+<meta name="viewport" content="width=1440, initial-scale=1">
+
+<!-- Fonts: Space Grotesk + Inter + JetBrains Mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="app.css">
+
+<style>
+  html, body { height: 100%; background: var(--bg-0); }
+  body { margin: 0; }
+  #root { width: 100vw; height: 100vh; }
+
+  .ab-app, .ab-variant {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-0);
+    color: var(--text-0);
+    font-family: var(--font-sans);
+  }
+
+  .dc-caption {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: #5a4a2a;
+    opacity: 0.7;
+    margin-top: 2px;
+  }
+
+  .ab-comp {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background: var(--bg-0);
+    color: var(--text-0);
+    padding: 20px;
+  }
+
+  /* PM reason-code picker grid */
+  .reason-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 4px;
+  }
+  .reason-pick {
+    padding: 6px 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    background: var(--bg-1);
+    border: 1px solid var(--border-1);
+    color: var(--text-2);
+    cursor: pointer;
+    text-align: left;
+  }
+  .reason-pick:hover { color: var(--text-0); border-color: var(--border-2); }
+  .reason-pick.active.primary   { border-color: var(--magenta); color: var(--magenta); background: var(--magenta-dim); }
+  .reason-pick.active.secondary { border-color: var(--cyan);    color: var(--cyan);    background: rgba(0,255,209,0.07); }
+
+  /* PM quality buttons */
+  .quality-pick {
+    padding: 4px 8px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    background: transparent;
+    border: 1px solid var(--border-1);
+    cursor: pointer;
+    min-width: 70px;
+  }
+
+  /* Transcript turn list */
+  .turn-row {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-1);
+    cursor: pointer;
+  }
+  .turn-row:hover { background: var(--bg-1); }
+  .turn-row.active { background: var(--bg-2); border-left: 3px solid var(--magenta); padding-left: 9px; }
+  .editable-block.highlight { box-shadow: 0 0 0 1px var(--magenta-soft); }
+</style>
+
+<!-- React 18 + Babel (pinned, with integrity) -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"
+  integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L"
+  crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"
+  integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm"
+  crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
+  integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y"
+  crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Data + shared components -->
+<script type="text/babel" src="mock.jsx"></script>
+<script type="text/babel" src="components.jsx"></script>
+
+<!-- Screens (9, mirroring the real Streamlit tabs) -->
+<script type="text/babel" src="screen-ledger.jsx"></script>
+<script type="text/babel" src="screen-decisions.jsx"></script>
+<script type="text/babel" src="screen-postmortems.jsx"></script>
+<script type="text/babel" src="screen-transcripts.jsx"></script>
+<script type="text/babel" src="screen-sheets.jsx"></script>
+<script type="text/babel" src="screen-attribution-prompt.jsx"></script>
+
+<!-- App shell -->
+<script type="text/babel" src="app.jsx"></script>
+
+<!-- Design canvas -->
+<script type="text/babel" src="design-canvas.jsx"></script>
+
+<!-- Tweaks panel -->
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<script type="text/babel">
+const { useState: useStateRoot } = React;
+
+function ComponentLibrary() {
+  return (
+    <div className="ab-comp">
+      <div className="h-comment mb-3">chip vocabulary</div>
+      <div className="row gap-2 mb-4" style={{ flexWrap: "wrap" }}>
+        <Chip kind="yes">Yes</Chip>
+        <Chip kind="no">No</Chip>
+        <Chip kind="pos">+$18.50</Chip>
+        <Chip kind="neg">-$21.32</Chip>
+        <Chip kind="warn">NEEDS REVIEW</Chip>
+        <Chip kind="gpt">GPT</Chip>
+        <Chip kind="claude">CLAUDE</Chip>
+        <Chip kind="immutable">trades_raw · APPEND-ONLY</Chip>
+        <Chip kind="draft">DRAFT</Chip>
+        <Chip kind="proposed">MODEL_PROPOSED</Chip>
+        <Chip kind="confirmed">USER_CONFIRMED</Chip>
+        <Chip kind="rejected">REJECTED</Chip>
+        <Chip kind="needs-rev">NEEDS_REVIEW</Chip>
+      </div>
+
+      <div className="h-comment mb-3">attribution chips · 7 ATTRIBUTIONS × 4 ASSISTANTS</div>
+      <div className="grid-2 mb-4" style={{ gap: 6 }}>
+        {window.MOCK.ATTRIBUTIONS.map(v => (
+          <div key={v} className="row gap-2">
+            <AttrChip assistant="gpt" value={v} compact />
+            <AttrChip assistant="claude" value={v} compact />
+          </div>
+        ))}
+      </div>
+
+      <div className="h-comment mb-3">buttons</div>
+      <div className="row gap-2 mb-2" style={{ flexWrap: "wrap" }}>
+        <Btn>DEFAULT</Btn>
+        <Btn kind="primary">PRIMARY</Btn>
+        <Btn kind="secondary">SECONDARY</Btn>
+        <Btn kind="ghost">GHOST</Btn>
+        <Btn kind="danger">DANGER</Btn>
+      </div>
+      <div className="row gap-3 mb-4" style={{ flexWrap: "wrap" }}>
+        <CmdBtn>commit fills</CmdBtn>
+        <CmdBtn>export packet</CmdBtn>
+        <CmdBtn>link decision</CmdBtn>
+      </div>
+
+      <div className="h-comment mb-3">raw vs editable</div>
+      <div className="grid-2 mb-4">
+        <div className="raw-block p-3">
+          <div className="dim mb-2 mono" style={{ fontSize: 10 }}>raw fill — trades_raw · never mutates</div>
+          <div className="mono">trd_9f3f · BUY No · 36¢ · 127.789 shares</div>
+        </div>
+        <div className="editable-block p-3">
+          <div className="brand mb-2 mono" style={{ fontSize: 10 }}>editable annotation</div>
+          <div className="mono">trade_decision_links → dec_8f3e29a0… · conf=1.0</div>
+        </div>
+      </div>
+
+      <div className="h-comment mb-3">evidence + redaction</div>
+      <div className="row gap-2 mb-4" style={{ flexWrap: "wrap" }}>
+        <span className="evidence-tag">evidence_source</span>
+        <span className="evidence-tag">match_q · 0.92</span>
+        <span className="evidence-tag">conv_btc_2026-05-16</span>
+        <span>quote: <span className="redacted">"Yes — buy NO at 0.36-0.38."</span></span>
+      </div>
+
+      <div className="h-comment mb-3">REASON_ERROR_CODES — 26 enum values, 6 groups</div>
+      <div className="row gap-1" style={{ flexWrap: "wrap" }}>
+        {window.MOCK.REASON_ERROR_CODES.map(c => (
+          <span key={c} className="mono" style={{ fontSize: 10, padding: "3px 6px", border: "1px solid var(--border-1)", color: "var(--text-2)" }}>{c}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const TWEAKS_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "magenta",
+  "density": "minimal",
+  "startScreen": "ledger"
+}/*EDITMODE-END*/;
+
+function CanvasRoot() {
+  const t = window.useTweaks ? window.useTweaks(TWEAKS_DEFAULTS) : { ...TWEAKS_DEFAULTS };
+  const tweaks = t.tweaks || t;
+  const setTweak = t.setTweak;
+
+  // Apply accent
+  React.useEffect(() => {
+    const root = document.documentElement;
+    const map = {
+      magenta: { brand: "#ff3df0", brandDeep: "rgba(255,61,240,0.10)", brandDim: "rgba(255,61,240,0.06)", brandSoft: "rgba(255,61,240,0.14)", brandGlow: "rgba(255,61,240,0.45)" },
+      amber:   { brand: "#ffb420", brandDeep: "rgba(255,180,32,0.10)", brandDim: "rgba(255,180,32,0.06)", brandSoft: "rgba(255,180,32,0.14)", brandGlow: "rgba(255,180,32,0.45)" },
+      cyan:    { brand: "#00ffd1", brandDeep: "rgba(0,255,209,0.10)",  brandDim: "rgba(0,255,209,0.06)",  brandSoft: "rgba(0,255,209,0.12)",  brandGlow: "rgba(0,255,209,0.45)" },
+    };
+    const c = map[tweaks.accent] || map.magenta;
+    root.style.setProperty("--magenta",       c.brand);
+    root.style.setProperty("--magenta-deep",  c.brandDeep);
+    root.style.setProperty("--magenta-dim",   c.brandDim);
+    root.style.setProperty("--magenta-soft",  c.brandSoft);
+    root.style.setProperty("--magenta-glow",  c.brandGlow);
+  }, [tweaks.accent]);
+
+  const startScreen = tweaks.startScreen || "ledger";
+  const density = tweaks.density || "minimal";
+
+  return (
+    <>
+      <DesignCanvas>
+        <DCSection id="prototype" title="Polygraph · interactive prototype"
+                   subtitle="All 9 tabs from app/streamlit_app.py, faithful to ledger.services + enums. Click any tab to navigate; open this artboard fullscreen for a 1:1 walk-through.">
+          <DCArtboard id="full-app" label="full app · 1440 × 900" width={1440} height={900}>
+            <div className="ab-app">
+              <PolygraphApp initialScreen={startScreen} density={density} />
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="screens" title="Per-screen artboards"
+                   subtitle="Each of the 9 Streamlit tabs as its own focusable frame. Open any one fullscreen.">
+          <DCArtboard id="screen-import"      label="tabs[0] · import trades · import_trades_csv()"     width={1440} height={900}><div className="ab-variant"><PolygraphApp initialScreen="import"      density="minimal" /></div></DCArtboard>
+          <DCArtboard id="screen-transcripts" label="tabs[1] · import transcripts · NEW"                width={1440} height={900}><div className="ab-variant"><PolygraphApp initialScreen="transcripts" density="minimal" /></div></DCArtboard>
+          <DCArtboard id="screen-ledger"      label="tabs[2] · trade ledger · fetch_trades()"           width={1440} height={900}><div className="ab-variant"><PolygraphApp initialScreen="ledger"      density="minimal" /></div></DCArtboard>
+          <DCArtboard id="screen-unlinked"    label="tabs[3] · unlinked trades"                         width={1440} height={900}><div className="ab-variant"><PolygraphApp initialScreen="unlinked"    density="minimal" /></div></DCArtboard>
+          <DCArtboard id="screen-decisions"   label="tabs[4] · decisions"                               width={1440} height={900}><div className="ab-variant"><PolygraphApp initialScreen="decisions"   density="minimal" /></div></DCArtboard>
+          <DCArtboard id="screen-attribution" label="tabs[5] · assistant attribution"                   width={1440} height={900}><div className="ab-variant"><PolygraphApp initialScreen="attribution" density="minimal" /></div></DCArtboard>
+          <DCArtboard id="screen-pm"          label="tabs[6] · post-mortems · 26 REASON_ERROR_CODES"    width={1440} height={900}><div className="ab-variant"><PolygraphApp initialScreen="postmortems" density="minimal" /></div></DCArtboard>
+          <DCArtboard id="screen-packets"     label="tabs[7] · export review packets"                   width={1440} height={900}><div className="ab-variant"><PolygraphApp initialScreen="packets"     density="minimal" /></div></DCArtboard>
+          <DCArtboard id="screen-sheets"      label="tabs[8] · export to sheets"                        width={1440} height={900}><div className="ab-variant"><PolygraphApp initialScreen="sheets"      density="minimal" /></div></DCArtboard>
+          <DCArtboard id="screen-attr-prompt" label="tabs[9] · attribution prompt · NEW"                width={1440} height={900}><div className="ab-variant"><PolygraphApp initialScreen="attr-prompt" density="minimal" /></div></DCArtboard>
+        </DCSection>
+
+        <DCSection id="components" title="Component system"
+                   subtitle="Chips, attribution vocabulary, raw vs editable, reason codes.">
+          <DCArtboard id="comp-lib" label="component library" width={900} height={820}>
+            <ComponentLibrary />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="notes" title="Handoff notes · aligned to the real repo"
+                   subtitle="What this prototype maps to in mcleblanc711/polyberg-polygraph @ main.">
+          <DCArtboard id="notes-card" label="design ↔ codebase mapping" width={1100} height={880}>
+            <div className="ab-comp">
+              <div className="h-comment mb-3">surface ↔ Streamlit tabs ↔ service functions</div>
+              <pre className="mono" style={{ fontSize: 11, background: "var(--bg-1)", border: "1px solid var(--border-1)", padding: 12, color: "var(--text-1)", lineHeight: 1.6 }}>
+{`screen           streamlit tab               service function(s)
+─────────────    ───────────────────────     ─────────────────────────────────────────
+IMPORT           tabs[0] Import Trades        import_trades_csv → ImportResult
+TRANSCRIPTS      tabs[1] Import Transcripts   import_transcript_text → TranscriptImportResult
+LEDGER           tabs[2] Trade Ledger         fetch_trades(project, market_text, outcome, side, action, linked)
+UNLINKED         tabs[3] Unlinked Trades      fetch_unlinked_trades + suggest_candidate_groups
+                                              + link_trades_to_decision(trade_ids, decision_id, conf, method)
+DECISIONS        tabs[4] Decisions            create_decision / edit_decision / fetch_decisions
+                                              + get_linked_trades
+ATTRIBUTION      tabs[5] Assistant Attribution add_assistant_attribution / mark_attribution_review_status
+                                              + get_attributions_for_(trade|decision)
+POST-MORTEMS     tabs[6] Post-Mortems         create_or_update_postmortem / get_postmortems
+PACKETS          tabs[7] Export Review Packets export_attribution_packet / export_postmortem_packet + save_packet
+SHEETS           tabs[8] Export to Sheets     sheets_export.export_to_sheets (gspread; degrades w/o)
+ATTR PROMPT      tabs[9] Attribution Prompt   attribution_prompt.generate_attribution_prompt(trades)
+                                              (bulk date-grouped trade list, fill-in-the-blank for LLM)`}
+              </pre>
+
+              <div className="h-comment mt-4 mb-3">controlled vocabularies (mirror ledger/enums.py)</div>
+              <div className="kv">
+                <div><span className="k">PROJECTS</span><span className="v mono">GEO_OIL · ELECTIONS · SPORTS_MM · SPORTS_DIRECTIONAL · EXPERIMENTAL · CASH</span></div>
+                <div><span className="k">ASSISTANTS</span><span className="v mono">GPT · CLAUDE · GROK · USER</span></div>
+                <div><span className="k">ATTRIBUTIONS</span><span className="v mono">DIRECT_RECOMMENDATION · SUPPORTED_AFTER_REVIEW · OPPOSED · MENTIONED_BUT_NOT_RECOMMENDED · NO_MATCH_FOUND · NOT_INVOLVED · UNCLEAR</span></div>
+                <div><span className="k">REVIEW_STATUSES</span><span className="v mono">DRAFT · MODEL_PROPOSED · USER_CONFIRMED · REJECTED · NEEDS_REVIEW</span></div>
+                <div><span className="k">REASON_ERROR_CODES</span><span className="v mono">26 codes across 6 groups (setup / exit / process error / emotional / outcome / external)</span></div>
+              </div>
+
+              <div className="h-comment mt-4 mb-3">tables (mirror ledger/db.py)</div>
+              <pre className="mono" style={{ fontSize: 11, background: "var(--bg-1)", border: "1px solid var(--border-1)", padding: 12, color: "var(--text-1)", lineHeight: 1.5 }}>
+{`trades_raw                    APPEND-ONLY (triggers block UPDATE and DELETE)
+  trade_id PK · source_row_hash UNIQUE · imported_at · source_file · timestamp
+  market_slug · market_title · outcome · side · action
+  price · shares · notional · fees · raw_json
+
+decisions                     editable annotations
+  decision_id PK · decision_timestamp · project (enum) · sleeve
+  market_slug · market_title · outcome · side · intent · decision_type
+  price_used · target_entry · target_exit · max_allocation
+  thesis_summary · rule_summary · catalyst · invalidation
+  user_notes · status
+
+trade_decision_links          many-to-many
+  (trade_id, decision_id) PK · link_confidence · link_method · created_at
+
+assistant_attributions        editable
+  attribution_id PK · trade_id? · decision_id?   (CHECK: at least one set)
+  assistant (enum) · attribution (enum) · evidence · evidence_source
+  recommended_price · recommended_size · match_quality (0..1)
+  review_status (enum) · created_at
+
+postmortems                   editable
+  postmortem_id PK · decision_id FK · created_at · pnl
+  thesis_quality · execution_quality · sizing_quality · exit_quality · rule_read_quality
+  primary_error_type · secondary_error_type     (REASON_ERROR_CODES)
+  what_went_right · what_went_wrong
+  lesson_keep · lesson_change · never_repeat · future_rule · markdown_body`}
+              </pre>
+
+              <div className="h-comment mt-4 mb-3">design principles</div>
+              <ol className="sans" style={{ fontSize: 12, lineHeight: 1.7, color: "var(--text-1)", paddingLeft: 18 }}>
+                <li><span className="brand">trades_raw is APPEND-ONLY</span> — chrome and badges make this load-bearing fact obvious. No chain-hash fiction; the real guarantees are the no_update/no_delete triggers + the source_row_hash dedupe.</li>
+                <li>Editable rows carry a magenta left-edge bar and an <span className="mono">editable</span> tag.</li>
+                <li><Chip kind="draft">NO_MATCH_FOUND</Chip> ≠ <Chip kind="draft">NOT_INVOLVED</Chip> — never collapse them in filters or copy.</li>
+                <li>Transcript-sourced attributions ALWAYS land as <Chip kind="needs-rev">NEEDS_REVIEW</Chip> with match_quality in [0.4, 0.9]. Confirm/reject is a one-click action.</li>
+                <li>Decisions carry a <span className="mono">status</span> separate from any PnL; PnL lives on the post-mortem.</li>
+              </ol>
+            </div>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      {/* Tweaks */}
+      {window.TweaksPanel && (
+        <TweaksPanel>
+          <TweakSection title="theme">
+            <TweakColor
+              label="brand accent"
+              value={tweaks.accent}
+              onChange={v => setTweak("accent", v)}
+              options={[
+                { value: "magenta", color: "#ff3df0" },
+                { value: "amber",   color: "#ffb420" },
+                { value: "cyan",    color: "#00ffd1" },
+              ]}
+            />
+            <TweakRadio label="density" value={tweaks.density} onChange={v => setTweak("density", v)}
+              options={["minimal","dense","comfy"]} />
+            <TweakSelect label="prototype starts on tab" value={tweaks.startScreen} onChange={v => setTweak("startScreen", v)}
+              options={["import","transcripts","ledger","unlinked","decisions","attribution","postmortems","packets","sheets","attr-prompt"]} />
+          </TweakSection>
+        </TweaksPanel>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<CanvasRoot />);
+</script>
+</body>
+</html>
