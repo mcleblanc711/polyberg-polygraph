@@ -28,19 +28,36 @@ class ImportResult:
 
 
 COLUMN_ALIASES = {
-    "timestamp": {"timestamp", "time", "date", "created_at", "created"},
-    "market_slug": {"market_slug", "market", "slug", "market_id"},
-    "market_title": {"market_title", "title", "question", "market_question", "marketname", "market_name"},
+    "timestamp": {"timestamp", "timestamp_utc", "time", "date", "created_at", "created"},
+    "market_slug": {"market_slug", "market", "slug", "market_id", "condition_id"},
+    "market_title": {
+        "market_title",
+        "title",
+        "question",
+        "market_question",
+        "marketname",
+        "market_name",
+        "condition_title",
+    },
     "outcome": {"outcome", "token", "position", "asset", "contract", "tokenname", "token_name"},
     "side": {"side", "buy_sell", "buy/sell", "direction"},
-    "action": {"action", "type", "trade_type"},
-    "price": {"price", "avg_price", "average_price"},
+    "action": {"action", "type", "trade_type", "tx_type"},
+    "price": {"price", "price_usdc", "avg_price", "average_price"},
     "shares": {"shares", "size", "quantity", "qty", "amount_shares", "tokenamount", "token_amount"},
-    "notional": {"notional", "amount", "value", "total", "cash_value", "usdcamount", "usdc_amount"},
-    "fees": {"fees", "fee"},
+    "notional": {
+        "notional",
+        "notional_usdc",
+        "amount",
+        "value",
+        "total",
+        "cash_value",
+        "usdcamount",
+        "usdc_amount",
+    },
+    "fees": {"fees", "fee", "fee_usdc"},
 }
 
-_TRADE_ACTIONS = {"buy", "sell"}
+_TRADE_ACTIONS = {"buy", "sell", "trade"}
 
 
 def import_trades_csv(conn: sqlite3.Connection, csv_path: str | Path) -> ImportResult:

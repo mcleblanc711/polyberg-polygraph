@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from app.api.deps import get_db
 from ledger.grouping import suggest_candidate_groups
@@ -49,7 +49,12 @@ class LinkBody(BaseModel):
 
 @router.post("/link")
 def link(body: LinkBody, conn=Depends(get_db)):
-    link_trades_to_decision(
-        conn, body.trade_ids, body.decision_id, body.link_confidence, body.link_method
-    )
+    try:
+        link_trades_to_decision(
+            conn, body.trade_ids, body.decision_id, body.link_confidence, body.link_method
+        )
+    except ValueError as e:
+        message = str(e)
+        status_code = 404 if "not found" in message else 400
+        raise HTTPException(status_code, message)
     return {"ok": True, "linked": len(body.trade_ids)}

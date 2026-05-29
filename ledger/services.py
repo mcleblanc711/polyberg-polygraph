@@ -127,12 +127,17 @@ def fetch_trades(
     query = [
         """
         SELECT t.*,
-               CASE WHEN COUNT(l.decision_id) > 0 THEN 1 ELSE 0 END AS is_linked,
+               CASE WHEN COUNT(DISTINCT l.decision_id) > 0 THEN 1 ELSE 0 END AS is_linked,
                GROUP_CONCAT(DISTINCT d.project) AS linked_projects,
-               GROUP_CONCAT(DISTINCT d.decision_id) AS linked_decision_ids
+               GROUP_CONCAT(DISTINCT d.sleeve) AS linked_sleeves,
+               GROUP_CONCAT(DISTINCT d.decision_id) AS linked_decision_ids,
+               GROUP_CONCAT(DISTINCT d.project) AS project,
+               GROUP_CONCAT(DISTINCT d.sleeve) AS sleeve,
+               COUNT(DISTINCT a.attribution_id) AS attr_count
         FROM trades_raw t
         LEFT JOIN trade_decision_links l ON l.trade_id = t.trade_id
         LEFT JOIN decisions d ON d.decision_id = l.decision_id
+        LEFT JOIN assistant_attributions a ON a.trade_id = t.trade_id
         """
     ]
     where = []
@@ -141,9 +146,9 @@ def fetch_trades(
         where.append("d.project = ?")
         params.append(project)
     if market_text:
-        where.append("(t.market_slug LIKE ? OR t.market_title LIKE ?)")
+        where.append("(t.market_slug LIKE ? OR t.market_title LIKE ? OR t.trade_id LIKE ?)")
         needle = f"%{market_text}%"
-        params.extend([needle, needle])
+        params.extend([needle, needle, needle])
     if outcome:
         where.append("t.outcome = ?")
         params.append(outcome)
@@ -157,9 +162,9 @@ def fetch_trades(
         query.append(" WHERE " + " AND ".join(where))
     query.append(" GROUP BY t.trade_id")
     if linked is True:
-        query.append(" HAVING COUNT(l.decision_id) > 0")
+        query.append(" HAVING COUNT(DISTINCT l.decision_id) > 0")
     elif linked is False:
-        query.append(" HAVING COUNT(l.decision_id) = 0")
+        query.append(" HAVING COUNT(DISTINCT l.decision_id) = 0")
     query.append(" ORDER BY t.timestamp DESC")
     return rows_to_dicts(conn.execute("".join(query), params).fetchall())
 

@@ -83,8 +83,8 @@ export default function Ledger({ go }) {
           <label className="in-label">link status</label>
           <select className="in" value={linkFilter} onChange={e => setLinkFilter(e.target.value)} style={{ width: 120 }}>
             <option value="">all</option>
-            <option value="linked">linked</option>
-            <option value="unlinked">unlinked</option>
+            <option value="true">linked</option>
+            <option value="false">unlinked</option>
           </select>
         </div>
         <div className="col" style={{ alignSelf: 'flex-end' }}>

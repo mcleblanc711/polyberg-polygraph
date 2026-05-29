@@ -9,7 +9,13 @@ Polygraph is not a trading bot. It does not place, cancel, recommend, scrape, or
 ```bash
 python3.11 -m venv .venv
 . .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev,api]"
+```
+
+Optional integrations:
+
+```bash
+pip install -e ".[mcp,sheets]"
 ```
 
 ## Initialize The Database
@@ -20,15 +26,29 @@ The database is created automatically at `data/processed/polygraph.sqlite` when 
 python -c "from ledger.db import connect_db; connect_db()"
 ```
 
-## Import Trades
+## Run The App
 
-Place Polymarket CSV exports in `data/raw_exports/`, then run the Streamlit app:
+The current UI is a React app served by the FastAPI backend:
+
+```bash
+cd app/ui
+npm install
+npm run build
+cd ../..
+polygraph-api
+```
+
+Open `http://localhost:8000`. For frontend-only development, run `npm run dev` in `app/ui`.
+
+The older Streamlit UI is still available:
 
 ```bash
 streamlit run app/streamlit_app.py
 ```
 
-Open the Import Trades tab, select a CSV, and import it. Re-importing the same file safely skips duplicate rows by `source_row_hash`.
+## Import Trades
+
+Open the Import tab, select a Polymarket CSV, and import it. Re-importing the same file safely skips duplicate rows by `source_row_hash`.
 
 Programmatic import:
 
@@ -101,9 +121,9 @@ postmortem = export_postmortem_packet(conn, decision_id="dec_...")
 
 Generated packets can be saved to `data/processed/`.
 
-## MCP Path Later
+## MCP Tools
 
-The service functions in `ledger/services.py`, `ledger/import_trades.py`, `ledger/grouping.py`, and `ledger/export_packets.py` are intentionally plain Python functions. A later MCP layer can expose read tools, controlled annotation write tools, packet exports, and transcript import without changing the raw trade immutability model.
+`mcp_server/server.py` exposes read tools, controlled annotation write tools, decision creation/linking, and packet exports over MCP while preserving the raw trade immutability model.
 
 ## Tests
 
@@ -113,9 +133,20 @@ pytest
 
 Tests use temporary SQLite databases and do not require network access.
 
-## V2 TODO
+## Current Status
 
-- Transcript import
-- MCP read tools
-- MCP controlled write tools
-- Google Sheets export
+Implemented:
+
+- Immutable CSV trade import with duplicate detection.
+- Decision creation/editing and many-to-many trade links.
+- Assistant attribution review packets and post-mortem packets.
+- Transcript import for plain text and ChatGPT JSON exports.
+- Google Sheets export via optional `gspread` dependency.
+- MCP read/write tools in `mcp_server/server.py`.
+- React/FastAPI UI for import, ledger review, linking, attribution, post-mortems, packets, and Sheets export.
+
+Next useful work:
+
+- Expand FastAPI route coverage as new UI behavior is added.
+- Add import fixtures for each real Polymarket export variant encountered.
+- Add database migrations before changing the SQLite schema beyond additive indexes or views.
