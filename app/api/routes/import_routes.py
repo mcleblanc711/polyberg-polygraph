@@ -1,8 +1,10 @@
+import json
 import tempfile
 from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from app.api.deps import get_db
 from ledger.import_trades import import_trades_csv
+from ledger.trade_ticket_import import TicketImportError, import_trade_ticket
 from ledger.transcript_import import import_transcript_text
 
 router = APIRouter(prefix="/import")
@@ -50,3 +52,29 @@ async def import_transcript(
         }
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+
+@router.post("/trade-ticket")
+async def import_ticket(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(False),
+    conn=Depends(get_db),
+):
+    content = await file.read()
+    try:
+        payload = json.loads(content.decode("utf-8", errors="replace"))
+    except json.JSONDecodeError as e:
+        raise HTTPException(400, f"invalid JSON: {e}")
+    try:
+        result = import_trade_ticket(conn, payload, dry_run=dry_run)
+    except TicketImportError as e:
+        raise HTTPException(400, str(e))
+    return {
+        "decisions_seen": result.decisions_seen,
+        "decisions_created": result.decisions_created,
+        "attributions_created": result.attributions_created,
+        "decision_ids": result.decision_ids,
+        "warnings": result.warnings,
+        "errors": result.errors,
+        "dry_run": dry_run,
+    }
