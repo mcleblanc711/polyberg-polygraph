@@ -2,6 +2,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from app.api.deps import get_db
+from ledger.postmortem_battery import battery_to_dict, run_battery
 from ledger.services import create_or_update_postmortem, get_postmortems
 
 router = APIRouter(prefix="/postmortems")
@@ -10,6 +11,11 @@ router = APIRouter(prefix="/postmortems")
 @router.get("")
 def list_all(conn=Depends(get_db)):
     return get_postmortems(conn)
+
+
+@router.get("/battery")
+def battery(conn=Depends(get_db)):
+    return battery_to_dict(run_battery(conn))
 
 
 class PostmortemBody(BaseModel):

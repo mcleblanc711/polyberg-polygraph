@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from ledger.enums import ASSISTANTS, ATTRIBUTIONS, PROJECTS, REVIEW_STATUSES, validate_choice
+from ledger.enums import ASSISTANTS, ATTRIBUTIONS, EXIT_REASONS, ORACLE_TYPES, PROJECTS, REVIEW_STATUSES, THESIS_BUCKETS, validate_choice
 from ledger.models import row_to_dict, rows_to_dicts
 
 
@@ -31,6 +31,9 @@ DECISION_FIELDS = {
     "invalidation",
     "user_notes",
     "status",
+    "oracle_type",
+    "thesis_bucket",
+    "exit_reason",
 }
 
 POSTMORTEM_FIELDS = {
@@ -60,6 +63,12 @@ def create_decision(conn: sqlite3.Connection, **fields: Any) -> dict[str, Any]:
     values["decision_timestamp"] = values["decision_timestamp"] or _now_iso()
     values["project"] = project
     values["status"] = values["status"] or "DRAFT"
+    if values.get("oracle_type"):
+        validate_choice(values["oracle_type"], ORACLE_TYPES, "oracle_type")
+    if values.get("thesis_bucket"):
+        validate_choice(values["thesis_bucket"], THESIS_BUCKETS, "thesis_bucket")
+    if values.get("exit_reason"):
+        validate_choice(values["exit_reason"], EXIT_REASONS, "exit_reason")
 
     with conn:
         conn.execute(
@@ -68,12 +77,12 @@ def create_decision(conn: sqlite3.Connection, **fields: Any) -> dict[str, Any]:
                 decision_id, decision_timestamp, project, sleeve, market_slug, market_title,
                 outcome, side, intent, decision_type, price_used, target_entry, target_exit,
                 max_allocation, thesis_summary, rule_summary, catalyst, invalidation,
-                user_notes, status
+                user_notes, status, oracle_type, thesis_bucket, exit_reason
             ) VALUES (
                 :decision_id, :decision_timestamp, :project, :sleeve, :market_slug, :market_title,
                 :outcome, :side, :intent, :decision_type, :price_used, :target_entry, :target_exit,
                 :max_allocation, :thesis_summary, :rule_summary, :catalyst, :invalidation,
-                :user_notes, :status
+                :user_notes, :status, :oracle_type, :thesis_bucket, :exit_reason
             )
             """,
             values,
@@ -86,6 +95,12 @@ def edit_decision(conn: sqlite3.Connection, decision_id: str, **updates: Any) ->
     clean_updates = {k: v for k, v in updates.items() if k in DECISION_FIELDS}
     if "project" in clean_updates and clean_updates["project"]:
         validate_choice(clean_updates["project"], PROJECTS, "project")
+    if "oracle_type" in clean_updates and clean_updates["oracle_type"]:
+        validate_choice(clean_updates["oracle_type"], ORACLE_TYPES, "oracle_type")
+    if "thesis_bucket" in clean_updates and clean_updates["thesis_bucket"]:
+        validate_choice(clean_updates["thesis_bucket"], THESIS_BUCKETS, "thesis_bucket")
+    if "exit_reason" in clean_updates and clean_updates["exit_reason"]:
+        validate_choice(clean_updates["exit_reason"], EXIT_REASONS, "exit_reason")
     if not clean_updates:
         return get_decision(conn, decision_id)
 

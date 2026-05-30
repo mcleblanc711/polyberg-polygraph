@@ -29,6 +29,19 @@ REVIEW_STATUSES = {
     "NEEDS_REVIEW",
 }
 
+ORACLE_TYPES = {"data", "subjective", "hybrid"}
+
+THESIS_BUCKETS = {
+    "hormuz_transit",
+    "iran_nuclear",
+    "iran_diplomacy",
+    "oil_commodities",
+    "btc_binary",
+    "other",
+}
+
+EXIT_REASONS = {"voluntary", "forced_liquidity", "stop", "resolution"}
+
 REASON_ERROR_CODES = {
     "RULE_ARB",
     "CLEAN_ORACLE_NO",

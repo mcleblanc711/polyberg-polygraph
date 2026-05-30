@@ -53,6 +53,9 @@ class CreateDecisionBody(BaseModel):
     invalidation: Optional[str] = None
     user_notes: Optional[str] = None
     status: Optional[str] = None
+    oracle_type: Optional[str] = None
+    thesis_bucket: Optional[str] = None
+    exit_reason: Optional[str] = None
 
 
 @router.post("")
@@ -71,6 +74,9 @@ class EditDecisionBody(BaseModel):
     catalyst: Optional[str] = None
     invalidation: Optional[str] = None
     sleeve: Optional[str] = None
+    oracle_type: Optional[str] = None
+    thesis_bucket: Optional[str] = None
+    exit_reason: Optional[str] = None
 
 
 @router.patch("/{decision_id}")

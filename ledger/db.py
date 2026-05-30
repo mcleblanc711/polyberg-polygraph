@@ -79,7 +79,10 @@ def init_db(conn: sqlite3.Connection) -> None:
             catalyst TEXT,
             invalidation TEXT,
             user_notes TEXT,
-            status TEXT
+            status TEXT,
+            oracle_type TEXT,
+            thesis_bucket TEXT,
+            exit_reason TEXT
         );
 
         CREATE TABLE IF NOT EXISTS trade_decision_links (
@@ -134,4 +137,15 @@ def init_db(conn: sqlite3.Connection) -> None:
         );
         """
     )
+    conn.commit()
+    _migrate_decisions_columns(conn)
+
+
+def _migrate_decisions_columns(conn: sqlite3.Connection) -> None:
+    """Add columns introduced after initial schema to existing databases."""
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(decisions)").fetchall()}
+    new_cols = [("oracle_type", "TEXT"), ("thesis_bucket", "TEXT"), ("exit_reason", "TEXT")]
+    for col, typedef in new_cols:
+        if col not in existing:
+            conn.execute(f"ALTER TABLE decisions ADD COLUMN {col} {typedef}")
     conn.commit()
